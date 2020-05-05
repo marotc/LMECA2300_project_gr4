@@ -1,0 +1,30 @@
+
+----------------------------------------------------------
+DAM BREAK
+	Without correction :
+
+	iter : 1500
+	M0 : 8.036 e-2
+	M1 : 3.8224 e-1
+
+
+	With correction MLS
+
+	iter : 1500
+	M0 : 2.282 e-1
+	M1 : 4.366 e-1
+
+	With correction CSPM
+
+	iter : 800
+	M0 : 3.19
+	M1 : 1.28
+
+	With Kernel gradient correction method
+
+	Le processus s'arrête !
+	Surement une erreur mémoire.
+----------------------------------------------------------
+----------------------------------------------------------
+----------------------------------------------------------
+

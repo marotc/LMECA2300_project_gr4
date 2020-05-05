@@ -1,0 +1,20 @@
+Circle
+
+No correction :
+	Iter 500
+	M0 : 1.826 e-2
+	M1 : 3.489 e-1
+
+MLS :
+	Iter 500
+	M0 : 1.665 e-2
+	M1 : 4.472 e-1
+
+CSPM :
+	Iter 500
+	M0 : 1.798 e-2
+	M1 : 3.488 e-1
+
+Kernel gradient :
+
+	Processus arrêté !
