@@ -6,7 +6,8 @@ double compute_div(Particle* pi, xy_getter get, Kernel kernel, double kh) {
     ListNode *node = pi->neighborhood->head;
     while(node != NULL) {
         Particle *pj = node->v;
-
+       if(pj->fictive == false)
+        {
         xy *grad_W = grad_kernel(pi->pos, pj->pos, kh, kernel);
         // correct_grad_local(grad_W, pi, pj, kh, kernel);
 
@@ -14,6 +15,7 @@ double compute_div(Particle* pi, xy_getter get, Kernel kernel, double kh) {
         div += ((fj->x - fi->x) * grad_W->x)*pj->m;
         div += ((fj->y - fi->y) * grad_W->y)*pj->m;
         free(grad_W);
+        }
         node = node->next;
     }
     div /= pi->rho;
@@ -29,6 +31,8 @@ void compute_grad(Particle* pi, scalar_getter get, Kernel kernel, double kh,xy* 
   //printf("Computing gradient of (%lf, %lf), fi = %lf\n", particle->pos->x, particle->pos->y, fi);
   while(node != NULL) {
       Particle *pj = node->v;
+      if(pj->fictive == false)
+        {
       xy *grad_W = grad_kernel(pi->pos, pj->pos, kh, kernel);
 
       double fj = get(pj);
@@ -37,6 +41,7 @@ void compute_grad(Particle* pi, scalar_getter get, Kernel kernel, double kh,xy* 
       gy += pi->rho * pj->m * (fi/squared(pi->rho) + fj/squared(pj->rho)) * grad_W->y;
       free(grad_W);
       //printf("grad = (%lf, %lf), fj = %lf\n", grad->x, grad->y, fj);
+      }
       node = node->next;
   }
   // xy *cg = xy_new(gx,gy);

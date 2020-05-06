@@ -79,8 +79,6 @@ Particle* Particle_new(int index, double m, xy* pos, xy* v, double rho_0, double
 	particle->neighborhood = List_new();
 	particle->potential_neighborhood = List_new();
 
-    particle->fictive=false;
-
     particle->temp_min = 273.15;
     particle->temp_max = 373.15;
     particle->temp = temp;

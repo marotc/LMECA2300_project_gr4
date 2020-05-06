@@ -161,9 +161,10 @@ void display_particles_boundary(Particle** particles, Animation* animation, bool
 
     cvPoint *pts = malloc(sizeof(cvPoint) * N);
 
+     double zoom = 1;
     for (int i = 0; i < N;i++) {
-        pts[i].x =         particles[i]->pos->x;
-        pts[i].y =         particles[i]->pos->y;
+        pts[i].x =         zoom*particles[i]->pos->x;
+        pts[i].y =         zoom*particles[i]->pos->y;
         pts[i].val =         particles[i]->temp;
 //                pts[i].val = ((float)rand()) / RAND_MAX;
     }
@@ -181,7 +182,7 @@ void display_particles_boundary(Particle** particles, Animation* animation, bool
 		while (bov_window_get_time(window) - tbegin < animation->timeout) {
 
             //draw particle as a continuous field
-          // drawParticulesContinuous(animation->contiView, pts, N);
+          drawParticulesContinuous(animation->contiView, pts, N);
 
 
 
@@ -189,7 +190,7 @@ void display_particles_boundary(Particle** particles, Animation* animation, bool
 				// bov_lines_draw(window,animation->grid,0, BOV_TILL_END); //To show the grid
 				bov_line_loop_draw(window, point_bound, 0, BOV_TILL_END);
              bov_particles_draw(window, animation->particles, 0, BOV_TILL_END);
-			if (iter%500 == 0) bov_window_screenshot(window, screenshot_name);
+			if (iter%100 == 0) bov_window_screenshot(window, screenshot_name);
 			bov_window_update(window);
 		}
 	}

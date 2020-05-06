@@ -61,7 +61,7 @@ void update_positions_ellipse(Grid* grid, Particle** particles, Particle_derivat
 void update_positions_test_static_bubble(Grid* grid, Particle** particles, Particle_derivatives** particles_derivatives, Residual** residuals, int n_p, Setup* setup);
 
 void compute_Cs(Particle *particle, Kernel kernel, double kh);
-void assemble_residual_NS(Particle* particle, Particle_derivatives* Particle_derivatives, Residual* residual, Setup* setup);
+void assemble_residual_NS(Particle* particle, Particle_derivatives* Particle_derivatives, Residual* residual, Setup* setup, double temp_moy);
 void time_integrate(Particle* particle, Residual* residual,Particle_derivatives *dp, double delta_t);
 void time_integrate_CSPM(Particle* particle, Particle_derivatives* dpi, Residual* residual, Setup* setup);
 

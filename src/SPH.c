@@ -126,6 +126,7 @@ void random_moves(Grid* grid, Particle** particles, Particle_derivatives** parti
 void update_positions_Colagrossi(Grid* grid, Particle** particles, Particle_derivatives** particles_derivatives, Residual** residuals, int n_p, Setup* setup){
 	// Colagrossi method
 	// Compute derivatives
+	double temp_moy;
 	for(int i = 0; i < n_p; i++){
 		Particle* pi = particles[i];
 		Particle_derivatives* dpi = particles_derivatives[i];
@@ -136,7 +137,9 @@ void update_positions_Colagrossi(Grid* grid, Particle** particles, Particle_deri
 		dpi->lapl_v->y = compute_lapl(pi, Particle_get_v_y,kernel,kh);
 		dpi->lapl_Temp = compute_lapl(particles[i], Particle_get_Temp, setup->kernel, setup->kh);
 		compute_grad(pi, Particle_get_P, kernel, kh, particles_derivatives[i]->grad_P);
+		temp_moy += pi->temp;
 	}
+	temp_moy = temp_moy/n_p;
 	// Compute the residuals
 	double g = -9.81;
 	for(int i = 0; i < n_p; i ++){
@@ -155,12 +158,13 @@ void update_positions_Colagrossi(Grid* grid, Particle** particles, Particle_deri
 		res->momentum_x_eq += (mu/rho) * dpi->lapl_v->x;
 		res->momentum_y_eq += (mu/rho) * dpi->lapl_v->y;
 
-		//Boussinesq term
+		//Boussinesq term and update temp
 		double alpha = 0.604/(rho*4185);
-		res->momentum_y_eq -=  alpha*(pi->temp-323.15)*g;
+		pi->temp += setup->timestep * dpi->lapl_Temp* alpha;
+		//res->momentum_y_eq -=  alpha*1e-10*(pi->temp-temp_moy)*g; 
 
 		if (setup->gravity == 1){
-			res->momentum_y_eq -= g;
+			res->momentum_y_eq += g;
 		}
 	}
 	// Time integration
@@ -177,9 +181,9 @@ void update_positions_Colagrossi(Grid* grid, Particle** particles, Particle_deri
 		pi->pos->x += pi->v->x*dt;
 		pi->pos->y += pi->v->y*dt;
 
-		double alpha = 0.604/(pi->rho*4185);
+		//double alpha = 0.604/(pi->rho*4185);
 	    //alpha *= 100;
-	    pi->temp += dt * dpi->lapl_Temp* alpha;
+	    //pi->temp += dt * dpi->lapl_Temp* alpha;
 	}
 	// Constitutive equation for the pressure
 	for(int i = 0; i < n_p; i ++){
@@ -197,11 +201,12 @@ void update_positions_Colagrossi(Grid* grid, Particle** particles, Particle_deri
 void update_positions_seminar_5(Grid* grid, Particle** particles, Particle_derivatives** particles_derivatives, Residual** residuals, int n_p, Setup* setup) {
 
 	// Compute Cs, the XSPH correction on the velocity, and the divergence of the positions
-	for (int i = 0; i < n_p; i++) {
+	/*for (int i = 0; i < n_p; i++) {
 		compute_Cs(particles[i], setup->kernel, setup->kh);
 		if (setup->XSPH_epsilon != 0.0) compute_XSPH_correction(particles[i], setup->kernel, setup->kh,setup->XSPH_epsilon);
-	}
-
+	}*/
+     
+    double temp_moy;//= 323.15;
 	// Compute derivatives and normal
 	for (int i = 0; i < n_p; i++) {
 		particles_derivatives[i]->div_v = compute_div(particles[i], Particle_get_v, setup->kernel, setup->kh);
@@ -209,16 +214,21 @@ void update_positions_seminar_5(Grid* grid, Particle** particles, Particle_deriv
 		particles_derivatives[i]->lapl_v->y = compute_lapl(particles[i], Particle_get_v_y, setup->kernel, setup->kh);
 		compute_grad(particles[i], Particle_get_P, setup->kernel, setup->kh, particles_derivatives[i]->grad_P);
 		compute_grad(particles[i], Particle_get_Cs, setup->kernel, setup->kh, particles_derivatives[i]->grad_Cs);
-		particles_derivatives[i]->lapl_Cs = compute_lapl(particles[i], Particle_get_Cs, setup->kernel, setup->kh);
+//		particles_derivatives[i]->lapl_Cs = compute_lapl(particles[i], Particle_get_Cs, setup->kernel, setup->kh);
 		particles_derivatives[i]->lapl_Temp = compute_lapl(particles[i], Particle_get_Temp, setup->kernel, setup->kh);
 		// assemble_residual_NS(particles[i], particles_derivatives[i], residuals[i], setup);
-		compute_normal(particles[i], particles_derivatives[i]);
+//		compute_normal(particles[i], particles_derivatives[i]);
+        temp_moy += particles[i]->temp;
 	}
+
+	temp_moy = temp_moy/n_p;
+
+	//printf("temp moy = %f \n", temp_moy);
 
 	// Assemble residual and compute curvature
 	for (int i = 0; i < n_p; i++) {
 	    //particles[i]->kappa = 2.0*compute_div(particles[i], Particle_get_normal, setup->kernel, setup->kh);
-	    assemble_residual_NS(particles[i], particles_derivatives[i], residuals[i], setup);
+	    assemble_residual_NS(particles[i], particles_derivatives[i], residuals[i], setup, temp_moy);
 	}
 
 	// Integrate (obtain new values, i.e. density, velocities, pressure and positions, at time t+1)
@@ -253,7 +263,7 @@ void compute_normal(Particle *particle, Particle_derivatives* particle_derivativ
 }
 
 // Assemble the residual of the (incompressible) Navier-Stokes equations based on the derivatives available
-void assemble_residual_NS(Particle* particle, Particle_derivatives* particle_derivatives, Residual* residual,Setup* setup) {
+void assemble_residual_NS(Particle* particle, Particle_derivatives* particle_derivatives, Residual* residual,Setup* setup, double temp_moy) {
 	double mu_i = particle->param->dynamic_viscosity;
 
 	double rho_i = particle->rho;
@@ -262,9 +272,9 @@ void assemble_residual_NS(Particle* particle, Particle_derivatives* particle_der
 	xy* lapl_v = particle_derivatives->lapl_v;
 
 	// Compute UNIT normal vector
-	xy *n = particle_derivatives->grad_Cs; // surface normal inward
-	double norm_n = norm(n);
-	n->x /= norm_n, n->y /= norm_n;
+    /*xy *n = particle_derivatives->grad_Cs; // surface normal inward
+    double norm_n = norm(n);
+    n->x /= norm_n, n->y /= norm_n;
 
 	double lapl_Cs = particle_derivatives->lapl_Cs;
 	// Choose between curvature estimated with Laplacian of colour field or with divergence of normal
@@ -287,13 +297,15 @@ void assemble_residual_NS(Particle* particle, Particle_derivatives* particle_der
 		particle->P= 0;
 	}
 	else
-		particle->on_free_surface = false;
+		particle->on_free_surface = false;*/
 
 	residual->mass_eq = -rho_i * div_vel_i;
 	residual->momentum_x_eq = (-1.0/rho_i) * grad_P->x + (mu_i/rho_i) * lapl_v->x;
 	double alpha = 0.604/(particle->rho*4185);
+	alpha *= 100000;
 	double g = 9.81;
-	residual->momentum_y_eq = (-1.0/rho_i) * grad_P->y + (mu_i/rho_i) * lapl_v->y + alpha*(particle->temp-293.15)*g;
+	residual->momentum_y_eq = (-1.0/rho_i) * grad_P->y + (mu_i/rho_i) * lapl_v->y + alpha*(particle->temp-temp_moy)*g;
+
 	if (setup->gravity == 1){
 		residual->momentum_y_eq -= g;
 	}
@@ -310,8 +322,8 @@ void time_integrate(Particle* particle, Residual* residual,Particle_derivatives 
 	particle->v->y += delta_t * residual->momentum_y_eq;
 
 	// Update position with an Euler Implicit scheme
-	particle->pos->x += delta_t * particle->v->x - delta_t * particle->XSPH_correction->x;
-	particle->pos->y += delta_t * particle->v->y - delta_t * particle->XSPH_correction->y;
+	particle->pos->x += delta_t * particle->v->x;// - delta_t * particle->XSPH_correction->x;
+	particle->pos->y += delta_t * particle->v->y;// - delta_t * particle->XSPH_correction->y;
 
 
 	// Update pressure with Tait's equation of state
@@ -321,7 +333,7 @@ void time_integrate(Particle* particle, Residual* residual,Particle_derivatives 
 
 	//Update Temperature with Euleur method
 	double alpha = 0.604/(particle->rho*4185);
-	alpha *= 100;
+	alpha *= 10000;
 	particle->temp += delta_t * dp->lapl_Temp* alpha;
 
 }
@@ -448,7 +460,7 @@ void update_positions_ellipse(Grid* grid, Particle** particles, Particle_derivat
 		compute_grad(particles[i], Particle_get_P, setup->kernel, setup->kh, particles_derivatives[i]->grad_P);
 		compute_grad(particles[i], Particle_get_Cs, setup->kernel, setup->kh, particles_derivatives[i]->grad_Cs);
 		particles_derivatives[i]->lapl_Cs = compute_lapl(particles[i], Particle_get_Cs, setup->kernel, setup->kh);
-		assemble_residual_NS(particles[i], particles_derivatives[i], residuals[i],setup);
+		assemble_residual_NS(particles[i], particles_derivatives[i], residuals[i],setup,0);
 	}
 	int index_x_max, index_x_min, index_y_max, index_y_min;
 	double pos_x_max = -INFINITY, pos_x_min = INFINITY, pos_y_max = -INFINITY, pos_y_min = INFINITY;

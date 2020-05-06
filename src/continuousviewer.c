@@ -209,11 +209,14 @@ static void drawParticulesContinuousGrid(ContinuousViewer *viewer, const cvPoint
 
 
 void drawParticulesContinuous(ContinuousViewer *viewer, cvPoint *pts, size_t nPt){
+   // double zoom = 1;
+
     cvRect viewport;
-    viewport.x = -0.25;
-    viewport.y = -0.25;
-    viewport.w = 0.5;
-    viewport.h = 0.5;
+    viewport.x = -1;
+    viewport.y = -1;
+    viewport.w = 2;
+    viewport.h = 2;
+    
 
 
 //      float mvMat[9] = {, 0, 0, 0, 2.f/viewer->viewport.h, 0, , -2.f*viewer->viewport.y/viewer->viewport.h - 1, 1};

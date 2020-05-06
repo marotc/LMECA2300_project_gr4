@@ -22,12 +22,12 @@ int main() {
 void dam_break(){
 	// Parameters of the problem
 	// particle distribution on [-l,l] x [-l,l]
-	double l_x = 0.22; 
-	double l_y = 0.22;
+	double l_x = 0.14; 
+	double l_y = 0.14;
 	double L = 5; // size of the domain: [-L,L] x [-L,L]
 	double H = 5;
-	double dt = 2.0e-3; // physical time step
-	double T = 250.0; // duration of simulation
+	double dt = 1.0e-4; // physical time step
+	double T = 10.0; // duration of simulation
 	bool gravity = 0; // 1 if we consider the gravity
 	double temp = 293.15;
 
@@ -40,8 +40,8 @@ void dam_break(){
 
 
 	// SPH parameters
-	int n_per_dim_x = 10;//51; // number of particles per dimension
-	int n_per_dim_y = 20;
+	int n_per_dim_x = 50;//51; // number of particles per dimension
+	int n_per_dim_y = 50;
 	//double kh = sqrt(21) * 2 * l / n_per_dim; // kernel width to ensure 21 particles in the neighborhood
 	double kh = sqrt(21) * 2 * l_x / n_per_dim_x; // kernel width to ensure 21 particles in the neighborhood
 	int n_iter = (int)(T / dt); // number of iterations to perform
@@ -58,7 +58,7 @@ void dam_break(){
 	printf("n_iter = %d\n", n_iter);
 
 	// Animation parameter
-	double T_anim = 10; // duration of animation
+	double T_anim = T; // duration of animation
 	double dt_anim = T_anim / n_iter; // time step of animation
 
 	// Initialize particles on a square
@@ -68,19 +68,20 @@ void dam_break(){
 	double h_y = (2 * l_y / (n_per_dim_y - 1)); // step between neighboring particles
 
 	// Setup BOUNDARY
-	double lb = 0.5;
-	double hb = 0.5;
+	double lb = 0.3;
+	double hb = 0.3;
 	double Rp = 0.0025; //particle radius
  
 
     // Number of fictitious particle 
-    int n_p_x = 10;
-    int n_p_y = 20;
+    int n_p_x = 100; //the halfe
+    int n_p_y = 100; //the halfe
     double h_x_f = (lb / (n_p_x -1)); // step between fictitious particles
 	double h_y_f = (hb / (n_p_y -1)); // step between fictitious particles
 
     double n_p_real = n_p;
     n_p += 4*n_p_x+4*n_p_y;
+    
 
 	//double m = rho_0 * h*h;
 	double m = rho_0 * h_x*h_y;
@@ -96,9 +97,9 @@ void dam_break(){
 			// Insert initial condition on velocity here
 
             //set Temperature
-            temp = 293.15;
-          //  if(j  == 0 || j== 1 || j == 2) temp = 373.15;
-           // if(j == n_per_dim_y-1 || j == n_per_dim_y-2 || j == n_per_dim_y-3) temp = 273.15;
+            temp = 323.15;
+         //   if(j  == 0 || j== 1 || j== 2) temp = 373.15;
+          //  if(j == n_per_dim_y-1 || j == n_per_dim_y-2 || j == n_per_dim_y-3) temp = 273.15;
 
 
             //real particle
@@ -110,17 +111,16 @@ void dam_break(){
 		}
 	}
 
-
     // Initialize fictitious particles
     for(int i = 1; i<= n_p_y;i++) //left boundary
     {
        index += 2;
        xy *pos = xy_new(-l_x-Rp,-l_y + (i-1) * h_y_f);
-       xy *pos_2 = xy_new(-l_x-Rp-h_x_f,-l_y + (i-1) * h_y_f);
+       xy *pos_2 = xy_new(-l_x-Rp-0.005,-l_y + (i-1) * h_y_f);
        xy *v = xy_new(0.0, 0.0);
       
        //set Temperature
-         temp = 293.15;
+         temp = 273.15;
 
        //real particle
          fict = true;
@@ -134,12 +134,12 @@ void dam_break(){
 	     residuals[index] = Residual_new();
     }
 
-    for(int i = 1; i<= n_p_x;i++) //up boundary
+   for(int i = 1; i<= n_p_x;i++) //up boundary
     {
        index += 2;
        xy *pos = xy_new(-l_x + (i-1) * h_x_f,hb-l_y+Rp);
-       xy *pos_2 = xy_new(-l_x + (i-1) * h_x_f,hb-l_y+Rp+h_y_f);
-       xy *v = xy_new(0.0, 0.0);
+       xy *pos_2 = xy_new(-l_x + (i-1) * h_x_f,hb-l_y+Rp+0.005);
+       xy *v = xy_new(-0.0, 0.0);
       
        //set Temperature
          temp = 273.15;
@@ -159,11 +159,11 @@ void dam_break(){
     {
        index += 2;
        xy *pos = xy_new(lb-l_x+Rp,-l_y + (i-1) * h_y_f);
-       xy *pos_2 = xy_new(lb-l_x+Rp+h_x_f,-l_y + (i-1) * h_y_f);
+       xy *pos_2 = xy_new(lb-l_x+Rp+0.005,-l_y + (i-1) * h_y_f);
        xy *v = xy_new(0.0, 0.0);
       
        //set Temperature
-         temp = 293.15;
+         temp = 373.15;
 
        //real particle
          fict = true;
@@ -180,7 +180,7 @@ void dam_break(){
     {
        index += 2;
        xy *pos = xy_new(-l_x + (i-1) * h_x_f,-l_y-Rp);
-       xy *pos_2 = xy_new(-l_x + (i-1) * h_x_f,-l_y-Rp-h_y_f);
+       xy *pos_2 = xy_new(-l_x + (i-1) * h_x_f,-l_y-Rp-0.005);
        xy *v = xy_new(0.0, 0.0);
       
        //set Temperature
@@ -210,10 +210,10 @@ void dam_break(){
 	Animation *animation = Animation_new(n_p_real, dt_anim, grid, 1);
 
 
-    animation->contiView->modelViewport.x = -1.325;
-    animation->contiView->modelViewport.y = -1.2;
-    animation->contiView->modelViewport.w = 2.65;
-    animation->contiView->modelViewport.h = 2.4;
+    animation->contiView->modelViewport.x = -0.2;
+    animation->contiView->modelViewport.y = -0.2;
+    animation->contiView->modelViewport.w = 0.4;
+    animation->contiView->modelViewport.h = 0.4;
 
     animation->contiView->minVal = 273.15;
     animation->contiView->maxVal = 373.15;
