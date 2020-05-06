@@ -1,7 +1,7 @@
 #!/bin/bash
 i=0
 f=0
-while [ $f -le 14400 ]
+while [ $f -le 38300 ]
 do
 	convert -quality 100 test/test_$f  test/yo_$i.jpg;
 	i=$(( i + 1 ))

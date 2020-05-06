@@ -6,6 +6,8 @@
 #include "kernel.h"
 #include "consistency.h"
 #include "continuousviewer.h"
+#include <stdio.h>
+#include <time.h>
 
 //#include "crtdbg.h" // for memory leak detection; comment if you're on Linux
 
@@ -27,7 +29,7 @@ void dam_break(){
 	double L = 5; // size of the domain: [-L,L] x [-L,L]
 	double H = 5;
 	double dt = 1.0e-4; // physical time step
-	double T = 10.0; // duration of simulation
+	double T = 5.0; // duration of simulation
 	bool gravity = 0; // 1 if we consider the gravity
 	double temp = 293.15;
 
@@ -210,18 +212,25 @@ void dam_break(){
 	Animation *animation = Animation_new(n_p_real, dt_anim, grid, 1);
 
 
-    animation->contiView->modelViewport.x = -0.2;
-    animation->contiView->modelViewport.y = -0.2;
-    animation->contiView->modelViewport.w = 0.4;
-    animation->contiView->modelViewport.h = 0.4;
+    animation->contiView->modelViewport.x = -1;
+    animation->contiView->modelViewport.y = -0.8;
+    animation->contiView->modelViewport.w = 2;
+    animation->contiView->modelViewport.h = 1.6;
 
     animation->contiView->minVal = 273.15;
     animation->contiView->maxVal = 373.15;
 
+     
+    float temps;
+    clock_t t1, t2;
+    t1 = clock();
 
 	// Simulation
 	simulate_boundary(grid, particles, particles_derivatives, residuals, n_p, n_p_real, update_positions_seminar_5, setup, animation, boundary);
 	//simulate(grid, particles, particles_derivatives, residuals, n_p, update_positions_seminar_5, setup, animation);
+	 t2 = clock();
+    temps = (float)(t2-t1)/CLOCKS_PER_SEC;
+    printf("Temps d'exécution = %f minutes \n", temps/60);
 	// Free memory
 	Boundary_free(boundary);
 	free_particles(particles, n_p);

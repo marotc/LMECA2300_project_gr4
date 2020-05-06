@@ -62,9 +62,42 @@ ContinuousViewer *newContinuousViewer(){
 //            fragColor = vec4(mix(vec3(210, 31, 40)/255, vec3(165, 47, 90)/255.0, min((val-0.75)*4.0, 1.0)), 1);\n\
 ////std palette \n\
         fragColor.xyz = vec3(1.5) - 4.0 * abs(val - vec3(0.75, 0.5, 0.25));\n\
-        fragColor.a = 1.0-smoothstep(0.8, 1.0, sqrt(minDist)*200.0);\n\
+        fragColor.a = 1.0-smoothstep(0.8, 1.0, sqrt(minDist)*20.0);\n\
 //        fragColor = vec4(vec3(sqrt(minDist)*10.0), 1);\n\
     }";
+   
+   /* //frag shader with interpolation for missing part
+    const char *fragSource = "#version 130\n\
+    in mediump vec2 pos;\n\
+    out mediump vec4 fragColor;\n\
+    uniform vec2 valRangeCoefs;\n\
+    uniform vec3 ctrlPts[512];\n\
+    uniform int nPt;\n\
+    void main()\n\
+    {\n\
+        float value = 0; float sum = 0;\n\
+        for(int i = 0; i < nPt; i++){\n\
+            float w = 1.0 / (pow(10000*dot(ctrlPts[i].xy - pos, ctrlPts[i].xy - pos), 2) + 1);\n\
+            sum += w;\n\
+            value += w*ctrlPts[i].z;\n\
+//            minDist = min(minDist, dot(ctrlPts[i].xy - pos, ctrlPts[i].xy - pos));\n\
+        }\n\
+        value /= sum;\n\
+        float val = valRangeCoefs.x*value + valRangeCoefs.y; \n\
+// //old palette\n\
+//        if(val < 0.25) \n\
+//            fragColor = vec4(mix(vec3(72, 142, 202) / 255.0, vec3(72, 187, 70)/255.0, max(val, 0)*4.0), 1);\n\
+//        else if(val < 0.5) \n\
+//            fragColor = vec4(mix(vec3(72, 187, 70) / 255.0, vec3(240, 120, 41)/255.0, (val-0.25)*4.0), 1);\n\
+//        else if(val < 0.75) \n\
+//            fragColor = vec4(mix(vec3(240, 120, 41) / 255.0, vec3(210, 31, 40)/255.0, (val-0.5)*4.0), 1);\n\
+//        else \n\
+//            fragColor = vec4(mix(vec3(210, 31, 40)/255, vec3(165, 47, 90)/255.0, min((val-0.75)*4.0, 1.0)), 1);\n\
+////std palette \n\
+        fragColor.xyz = vec3(1.5) - 4.0 * abs(val - vec3(0.75, 0.5, 0.25));\n\
+        fragColor.a = 1.0;//-smoothstep(0.8, 1.0, sqrt(minDist)*20.0);\n\
+//        fragColor = vec4(vec3(sqrt(minDist)*10.0), 1);\n\
+    }";*/
 
 
     v->_frag = glCreateShader(GL_FRAGMENT_SHADER);
@@ -209,13 +242,13 @@ static void drawParticulesContinuousGrid(ContinuousViewer *viewer, const cvPoint
 
 
 void drawParticulesContinuous(ContinuousViewer *viewer, cvPoint *pts, size_t nPt){
-   // double zoom = 1;
+    double zoom = 2;
 
     cvRect viewport;
-    viewport.x = -1;
-    viewport.y = -1;
-    viewport.w = 2;
-    viewport.h = 2;
+    viewport.x = -0.15*zoom;
+    viewport.y = -0.2*zoom;
+    viewport.w = 0.35*zoom;
+    viewport.h = 0.45*zoom;
     
 
 
