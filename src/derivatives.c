@@ -58,6 +58,8 @@ double compute_lapl(Particle *pi, scalar_getter get, Kernel kernel, double kh) {
     ListNode *node = pi->neighborhood->head;
     while(node != NULL) {
         Particle *pj = node->v;
+        if(pj->fictive == false)
+        {
         xy *grad_W = grad_kernel(pi->pos, pj->pos, kh, kernel);
         // correct_grad_local(grad_W, pi, pj, kh, kernel);
 
@@ -68,6 +70,22 @@ double compute_lapl(Particle *pi, scalar_getter get, Kernel kernel, double kh) {
         if(d2 != 0) lapl += 2 * (pj->m/pj->rho) * (fi - fj) * (DXij->x * grad_W->x + DXij->y * grad_W->y);
         free(grad_W);
         free(DXij);
+        }
+        else if(fi > 270) //only the laplacian for temperature is calculed with the fictitious particle
+        {
+           xy *grad_W = grad_kernel(pi->pos, pj->pos, kh, kernel);
+        // correct_grad_local(grad_W, pi, pj, kh, kernel);
+
+        double alpha = pj->alpha; //coefficient for increase of decrease the heat transfert at wall
+
+        double fj = get(pj);
+        double d2 = squared(pi->pos->x - pj->pos->x) + squared(pi->pos->y - pj->pos->y); // squared distance between particles
+        // xy *DXij = xy_new((pi->pos->x - pj->pos->x) / d2, (pi->pos->y - pj->pos->y) / d2); // Delta X_{ij}
+        xy *DXij = xy_new((pi->pos->x - pj->pos->x) / d2, (pi->pos->y - pj->pos->y) / d2); // WARNING
+        if(d2 != 0) lapl += 2 * ((pj->m*alpha)/pj->rho) * (fi - fj) * (DXij->x * grad_W->x + DXij->y * grad_W->y);
+        free(grad_W);
+        free(DXij);
+        }
         node = node->next;
     }
     return lapl;

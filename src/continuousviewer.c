@@ -62,7 +62,7 @@ ContinuousViewer *newContinuousViewer(){
 //            fragColor = vec4(mix(vec3(210, 31, 40)/255, vec3(165, 47, 90)/255.0, min((val-0.75)*4.0, 1.0)), 1);\n\
 ////std palette \n\
         fragColor.xyz = vec3(1.5) - 4.0 * abs(val - vec3(0.75, 0.5, 0.25));\n\
-        fragColor.a = 1.0-smoothstep(0.8, 1.0, sqrt(minDist)*20.0);\n\
+        fragColor.a = 1.0-smoothstep(0.8, 1.0, sqrt(minDist)*2.0);\n\
 //        fragColor = vec4(vec3(sqrt(minDist)*10.0), 1);\n\
     }";
    
@@ -177,7 +177,7 @@ void freeContinuousViewer(ContinuousViewer *v)
 }
 
 static int couldAffect(cvPoint pt, cvRect r){
-    float k = 2.f;
+    float k = 6.f;
 
     //rect contains
     return pt.x >= r.x - r.w  *k && pt.y >= r.y - r.h  *k && pt.x <= r.x+r.w + r.w  *k&& pt.y <= r.y+r.h + r.h  *k;
@@ -242,13 +242,12 @@ static void drawParticulesContinuousGrid(ContinuousViewer *viewer, const cvPoint
 
 
 void drawParticulesContinuous(ContinuousViewer *viewer, cvPoint *pts, size_t nPt){
-    double zoom = 2;
 
     cvRect viewport;
-    viewport.x = -0.15*zoom;
-    viewport.y = -0.2*zoom;
-    viewport.w = 0.35*zoom;
-    viewport.h = 0.45*zoom;
+    viewport.x = -0.257;
+    viewport.y = -0.333;
+    viewport.w = 0.257+0.289;
+    viewport.h = 0.333+0.384;
     
 
 

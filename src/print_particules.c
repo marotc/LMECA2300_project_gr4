@@ -81,8 +81,10 @@ Animation* Animation_new(int N, double timeout,Grid* grid,double scale)
 	Animation* animation = (Animation*)malloc(sizeof(Animation));
 
 
-    animation->window = bov_window_new(1024, 780, "ANM Project: SPH");
-	bov_window_set_color(animation->window, (GLfloat[]) { 0.9f, 0.85f, 0.8f, 0.0f });
+    animation->window = bov_window_new(1024, 780, "ANM Project: SPH"); //1024,780
+    animation->window->param.zoom=    2.357948;
+    animation->window->param.translate[0] =    -0.368638;
+    bov_window_set_color(animation->window, (GLfloat[]) { 0.9f, 0.85f, 0.8f, 0.0f });
 	//bov_window_set_color(animation->window, (GLfloat[]) { 1.0f, 1.0f, 1.0f, 0.0f });
 	bov_window_enable_help(animation->window);
 	animation->N = N;
@@ -121,7 +123,10 @@ void Animation_free(Animation* animation)
 	bov_window_delete(animation->window);
 	free(animation);
 }
-void display_particles_boundary(Particle** particles, Animation* animation, bool end, int iter, double bounds[4]){
+void display_particles_boundary(Particle** particles, Animation* animation, bool end, int iter, double bounds[4],double temp_moy){
+//    printf("translate %f %f  zoom %f\n\n", animation->window->param.translate[0], animation->window->param.translate[1], animation->window->param.zoom);
+//    fflush(stdout);
+
     const int N = animation->N;
     GLfloat(*data)[8] = malloc(sizeof(data[0])*N);
     fillData(data, particles, N);
@@ -155,6 +160,26 @@ void display_particles_boundary(Particle** particles, Animation* animation, bool
 	};
     bov_points_set_param(point_bound, BoundParams);
 	//
+  //  printf("xl %f yb %f \n", xl,yb);
+
+    //cursor for temperature
+    double y = ((yt-yb)*((temp_moy-273.15)/100))+yb;
+    double x_1 = 0.5;
+    double x_2 = 0.51;
+    GLfloat coord_cursor[][2] = {
+	{ x_1,  y},
+	{ x_2,  y},
+	};
+	bov_points_t* point_cursor = bov_points_new(coord_cursor, 4, GL_STATIC_DRAW);
+	bov_points_param_t CursorParams = {
+		.fillColor = { 1.0, 0.0, 0.0, 1.0 },
+		.scale = { 1.0, 1.0 },
+		.width = 0.002
+	};
+    bov_points_set_param(point_cursor, CursorParams);
+
+
+
 	bov_window_t* window = animation->window;
 	double tbegin = bov_window_get_time(window);
 
@@ -169,14 +194,9 @@ void display_particles_boundary(Particle** particles, Animation* animation, bool
 //                pts[i].val = ((float)rand()) / RAND_MAX;
     }
 
-//    //random 500 pts (in [-1 1]^2, val in [0 1])
-//    srand(0);
-//    for(int i = 0; i < N; i++){
-//        pts[i].x = (((float)rand()) / RAND_MAX) * 2 - 1 ;
-//        pts[i].y = ((float)rand()) / RAND_MAX * 2 - 1 ;
-//        pts[i].val = ((float)rand()) / RAND_MAX;
 
-//    }
+   
+  
 
 	if (!end){
 		while (bov_window_get_time(window) - tbegin < animation->timeout) {
@@ -184,13 +204,14 @@ void display_particles_boundary(Particle** particles, Animation* animation, bool
             //draw particle as a continuous field
           drawParticulesContinuous(animation->contiView, pts, N);
 
-
+        
 
 			if(animation->grid != NULL)
 				// bov_lines_draw(window,animation->grid,0, BOV_TILL_END); //To show the grid
 				bov_line_loop_draw(window, point_bound, 0, BOV_TILL_END);
+			    bov_lines_draw(window, point_cursor, 0, 2); // curso for temperature
              bov_particles_draw(window, animation->particles, 0, BOV_TILL_END);
-			if (iter%50 == 0) bov_window_screenshot(window, screenshot_name);
+            if (iter%50 == 0) bov_window_screenshot(window, screenshot_name);
 			bov_window_update(window);
 		}
 	}
@@ -204,13 +225,13 @@ void display_particles_boundary(Particle** particles, Animation* animation, bool
 			bov_window_update_and_wait_events(window);
 		}
 	}
-
-
+        
     free(pts);
 
 }
 void display_particles(Particle** particles, Animation* animation,bool end, int iter)
 {
+
 	int N = animation->N;
 	GLfloat(*data)[8] = malloc(sizeof(data[0])*N);
 	fillData(data, particles, N);

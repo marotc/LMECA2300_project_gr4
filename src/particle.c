@@ -55,7 +55,7 @@ void Cell_free(Cell* cell) {
 	free(cell);
 }
 
-Particle* Particle_new(int index, double m, xy* pos, xy* v, double rho_0, double mu, double c_0, double gamma, double sigma, double temp, bool fict) {
+Particle* Particle_new(int index, double m, xy* pos, xy* v, double rho_0, double mu, double c_0, double gamma, double sigma, double temp, bool fict, int fict_bound, int fict_type, double alpha) {
 	Particle *particle = malloc(sizeof(Particle));
 	particle->index = index;
 	particle->m = m;
@@ -84,6 +84,11 @@ Particle* Particle_new(int index, double m, xy* pos, xy* v, double rho_0, double
     particle->temp = temp;
 
     particle->fictive = fict;
+
+    particle->fictive_bound = fict_bound;
+
+    particle->fictive_type = fict_type;
+    particle->alpha = alpha;
 
 	return particle;
 }
@@ -348,7 +353,7 @@ Particle** build_particles(int N, double L) {
 		double y = rand_interval(-L, L);
 		xy* pos = xy_new(x, y);
 		xy* vel = xy_new(0, 0);
-		particles[i] = Particle_new(i, 0, pos, vel, 0, 0, 0, 0, 0,273.15,false);
+		particles[i] = Particle_new(i, 0, pos, vel, 0, 0, 0, 0, 0,273.15,false,0,0,1);
 	}
 	return particles;
 }

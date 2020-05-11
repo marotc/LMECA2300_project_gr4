@@ -58,6 +58,9 @@ struct Particle {
         double temp_max;
 
         bool fictive; //fictive particles for boundary
+        int fictive_bound;
+        int fictive_type;
+        double alpha;
 
 	xy* XSPH_correction; // Correction on the velocity field when updating the position of the particles	
 	bool on_free_surface; // boolean to know if particles is on the free surface (used for visualization)
@@ -94,7 +97,7 @@ Grid* Grid_new(double x1, double x2, double y1, double y2, double kh); // Grid c
 void Grid_free(Grid* grid); // Grid destructor
 
 // Particle
-Particle* Particle_new(int index, double m, xy* pos, xy* v, double rho_0, double mu, double c_0, double gamma, double sigma,double temp, bool fict); // Particle constructor
+Particle* Particle_new(int index, double m, xy* pos, xy* v, double rho_0, double mu, double c_0, double gamma, double sigma,double temp, bool fict, int fict_bound, int fict_type, double alpha); // Particle constructor
 void Particle_free(Particle* particle);
 void free_particles(Particle** particles, int N);
 

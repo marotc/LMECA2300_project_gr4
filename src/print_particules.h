@@ -31,7 +31,7 @@ void colours_neighbors(GLfloat(*data)[8], Particle** particles, int index);
 void color_temp(Particle *p,float color[3]);
 
 void display_particles(Particle** particles, Animation* animation,bool end, int iter);
-void display_particles_boundary(Particle** particles, Animation* animation,bool end, int iter, double bounds[4]);
+void display_particles_boundary(Particle** particles, Animation* animation,bool end, int iter, double bounds[4],double temp_moy);
 
 
 

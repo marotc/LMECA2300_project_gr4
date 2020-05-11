@@ -1,6 +1,8 @@
 #include "SPH.h"
+#include <stdio.h>
+#include <time.h>
 
-Setup* Setup_new(int iter, double timestep,double kh,Verlet* verlet,Kernel kernel, Free_surface_detection free_surface_detection, double interface_threshold,double XSPH_epsilon, bool gravity) {
+Setup* Setup_new(int iter, double timestep,double kh,Verlet* verlet,Kernel kernel, Free_surface_detection free_surface_detection, double interface_threshold,double XSPH_epsilon, bool gravity, double beta) {
 	Setup* setup = (Setup*)malloc(sizeof(Setup));
 	setup->itermax = iter;
 	setup->timestep = timestep;
@@ -11,6 +13,7 @@ Setup* Setup_new(int iter, double timestep,double kh,Verlet* verlet,Kernel kerne
 	setup->interface_threshold = interface_threshold;
 	setup->XSPH_epsilon = XSPH_epsilon;
 	setup->gravity = gravity;
+	setup->beta = beta;
 	return setup;
 }
 
@@ -43,10 +46,11 @@ double max_velocity(Particle** p, int n_p){
 	}
 	return max;
 }
-void simulate(Grid* grid, Particle** particles, Particle_derivatives** particles_derivatives, Residual** residuals, int n_p, update_positions update_positions, Setup* setup, Animation* animation) {
+void simulate(Grid* grid, Particle** particles, Particle_derivatives** particles_derivatives, Residual** residuals, int n_p, update_positions update_positions, Setup* setup, Animation* animation,Boundary* boundary) {
 	double current_time = 0.0;
 	int ii = 5;
 	printf("%d\n", setup->itermax);
+	double temp_moy;
 	for (int iter = 0; iter < setup->itermax; iter++) {
 		printf("----------------------------------------------------- \n");
 		printf("iter %d / %d @ t = %lf \n", iter, setup->itermax, current_time);
@@ -54,7 +58,7 @@ void simulate(Grid* grid, Particle** particles, Particle_derivatives** particles
 		update_neighborhoods(grid, particles, n_p, iter, setup->verlet);
 		if (animation != NULL)
 			display_particles(particles, animation, false, iter);
-		update_positions(grid, particles, particles_derivatives, residuals, n_p, setup);
+		update_positions(grid, particles, particles_derivatives, residuals, n_p, setup,boundary);
 		printf("velocity_max = %f\n", max_velocity(particles,n_p));
 		if (iter%ii == 0){
 			// density_correction_MLS(particles, n_p, setup->kh, setup->kernel);
@@ -62,7 +66,9 @@ void simulate(Grid* grid, Particle** particles, Particle_derivatives** particles
 		get_M0(particles,n_p,setup->kh,setup->kernel);
 		get_M1(particles,n_p,setup->kh,setup->kernel);
 		current_time += setup->timestep;
+		
 	}
+	 
 	update_cells(grid, particles, n_p);
 	update_neighborhoods(grid, particles, n_p, 0, setup->verlet);
 	if (animation != NULL)
@@ -74,14 +80,23 @@ void simulate_boundary(Grid* grid, Particle** particles, Particle_derivatives** 
 	int ii = 5;
 	double bounds[4] = {boundary->xleft,boundary->xright, boundary->ybottom, boundary->ytop};
 	printf("Iterations max = %d\n", setup->itermax);
+	 float temps;
+    clock_t t1, t2;
+    t1 = clock();
+    setup->temp_moy = 293.15;
 	for (int iter = 0; iter < setup->itermax; iter++) {
 		//printf("----------------------------------------------------- \n");
-		if (iter%50 == 0) printf("Iterations %d sur %d  \n", iter,setup->itermax);
+		if (iter%50 == 0)
+		{
+			printf("Iterations %d sur %d  \n", iter,setup->itermax);
+			//printf("Temp moy = %f \n", setup->temp_moy);
+		}
 		update_cells(grid, particles, n_p);
 		update_neighborhoods(grid, particles, n_p, iter, setup->verlet);
 		if (animation != NULL)
-			display_particles_boundary(particles, animation, false,iter,bounds);
-		update_positions(grid, particles, particles_derivatives, residuals, n_p_real, setup);
+			display_particles_boundary(particles, animation, false,iter,bounds,setup->temp_moy);
+		
+		update_positions(grid, particles, particles_derivatives, residuals, n_p_real, setup, boundary);
 
 	 //	printf("velocity_max = %f\n", max_velocity(particles,n_p));
 		reflective_boundary(particles,n_p_real,boundary,Rp);
@@ -91,6 +106,12 @@ void simulate_boundary(Grid* grid, Particle** particles, Particle_derivatives** 
 		//get_M0(particles,n_p,setup->kh,setup->kernel);
 		//get_M1(particles,n_p,setup->kh,setup->kernel);
 		current_time += setup->timestep;
+		if(iter == setup->itermax-1)
+		{
+			t2 = clock();
+            temps = (float)(t2-t1)/CLOCKS_PER_SEC;
+            printf("Temps d'exécution = %f minutes \n", temps/60);
+		}
 	}
 	update_cells(grid, particles, n_p);
 	update_neighborhoods(grid, particles, n_p, 0, setup->verlet);
@@ -123,10 +144,9 @@ void random_moves(Grid* grid, Particle** particles, Particle_derivatives** parti
 			p->pos->y = grid->top - s;
 	}
 }
-void update_positions_Colagrossi(Grid* grid, Particle** particles, Particle_derivatives** particles_derivatives, Residual** residuals, int n_p, Setup* setup){
+void update_positions_Colagrossi(Grid* grid, Particle** particles, Particle_derivatives** particles_derivatives, Residual** residuals, int n_p, Setup* setup,Boundary* boundary){
 	// Colagrossi method
 	// Compute derivatives
-	double temp_moy;
 	for(int i = 0; i < n_p; i++){
 		Particle* pi = particles[i];
 		Particle_derivatives* dpi = particles_derivatives[i];
@@ -137,9 +157,9 @@ void update_positions_Colagrossi(Grid* grid, Particle** particles, Particle_deri
 		dpi->lapl_v->y = compute_lapl(pi, Particle_get_v_y,kernel,kh);
 		dpi->lapl_Temp = compute_lapl(particles[i], Particle_get_Temp, setup->kernel, setup->kh);
 		compute_grad(pi, Particle_get_P, kernel, kh, particles_derivatives[i]->grad_P);
-		temp_moy += pi->temp;
+		
 	}
-	temp_moy = temp_moy/n_p;
+	
 	// Compute the residuals
 	double g = -9.81;
 	for(int i = 0; i < n_p; i ++){
@@ -198,15 +218,15 @@ void update_positions_Colagrossi(Grid* grid, Particle** particles, Particle_deri
 		pi->P = B*(pow(rho/rho_0,gamma)-1);
 	}
 }
-void update_positions_seminar_5(Grid* grid, Particle** particles, Particle_derivatives** particles_derivatives, Residual** residuals, int n_p, Setup* setup) {
+void update_positions_seminar_5(Grid* grid, Particle** particles, Particle_derivatives** particles_derivatives, Residual** residuals, int n_p, Setup* setup,Boundary* boundary) {
 
 	// Compute Cs, the XSPH correction on the velocity, and the divergence of the positions
-	/*for (int i = 0; i < n_p; i++) {
+	for (int i = 0; i < n_p; i++) {
 		compute_Cs(particles[i], setup->kernel, setup->kh);
 		if (setup->XSPH_epsilon != 0.0) compute_XSPH_correction(particles[i], setup->kernel, setup->kh,setup->XSPH_epsilon);
-	}*/
+	}
      
-    double temp_moy;//= 323.15;
+   
 	// Compute derivatives and normal
 	for (int i = 0; i < n_p; i++) {
 		particles_derivatives[i]->div_v = compute_div(particles[i], Particle_get_v, setup->kernel, setup->kh);
@@ -214,21 +234,19 @@ void update_positions_seminar_5(Grid* grid, Particle** particles, Particle_deriv
 		particles_derivatives[i]->lapl_v->y = compute_lapl(particles[i], Particle_get_v_y, setup->kernel, setup->kh);
 		compute_grad(particles[i], Particle_get_P, setup->kernel, setup->kh, particles_derivatives[i]->grad_P);
 		compute_grad(particles[i], Particle_get_Cs, setup->kernel, setup->kh, particles_derivatives[i]->grad_Cs);
-//		particles_derivatives[i]->lapl_Cs = compute_lapl(particles[i], Particle_get_Cs, setup->kernel, setup->kh);
+		particles_derivatives[i]->lapl_Cs = compute_lapl(particles[i], Particle_get_Cs, setup->kernel, setup->kh);
 		particles_derivatives[i]->lapl_Temp = compute_lapl(particles[i], Particle_get_Temp, setup->kernel, setup->kh);
-		// assemble_residual_NS(particles[i], particles_derivatives[i], residuals[i], setup);
-//		compute_normal(particles[i], particles_derivatives[i]);
-        temp_moy += particles[i]->temp;
+		// assemble_residual_NS(particles[i], particles_derivatives[i], residuals[i], setup,0);
+		compute_normal(particles[i], particles_derivatives[i]);
+        
 	}
-
-	temp_moy = temp_moy/n_p;
 
 	//printf("temp moy = %f \n", temp_moy);
 
 	// Assemble residual and compute curvature
 	for (int i = 0; i < n_p; i++) {
 	    //particles[i]->kappa = 2.0*compute_div(particles[i], Particle_get_normal, setup->kernel, setup->kh);
-	    assemble_residual_NS(particles[i], particles_derivatives[i], residuals[i], setup, temp_moy);
+	    assemble_residual_NS(particles[i], particles_derivatives[i], residuals[i], setup, 0);
 	}
 
 	// Integrate (obtain new values, i.e. density, velocities, pressure and positions, at time t+1)
@@ -239,6 +257,42 @@ void update_positions_seminar_5(Grid* grid, Particle** particles, Particle_deriv
 		   time_integrate(particles[i], residuals[i],particles_derivatives[i] ,setup->timestep);
 		   // time_integrate_CSPM(particles[i],particles_derivatives[i], residuals[i], setup);
 	   // }
+	}
+}
+
+void update_positions_project_gr4(Grid* grid, Particle** particles, Particle_derivatives** particles_derivatives, Residual** residuals, int n_p, Setup* setup, Boundary* boundary) {
+
+	
+	setup->temp_moy = 0;
+	for (int i = 0; i < n_p; i++) {
+
+		/*moving_wall(particles[i], boundary, 1, 0, 0); //left  //NOT IMPROVED
+		moving_wall(particles[i], boundary, 2, 0, 0); //up
+		moving_wall(particles[i], boundary, 3, 0, 0); //right
+		moving_wall(particles[i], boundary, 4, 0, 0); //bottom*/
+		particles_derivatives[i]->div_v = compute_div(particles[i], Particle_get_v, setup->kernel, setup->kh);
+		particles_derivatives[i]->lapl_v->x = compute_lapl(particles[i], Particle_get_v_x, setup->kernel, setup->kh);
+		particles_derivatives[i]->lapl_v->y = compute_lapl(particles[i], Particle_get_v_y, setup->kernel, setup->kh);
+		compute_grad(particles[i], Particle_get_P, setup->kernel, setup->kh, particles_derivatives[i]->grad_P);
+		compute_grad(particles[i], Particle_get_Cs, setup->kernel, setup->kh, particles_derivatives[i]->grad_Cs);
+		particles_derivatives[i]->lapl_Temp = compute_lapl(particles[i], Particle_get_Temp, setup->kernel, setup->kh);
+	    setup->temp_moy += particles[i]->temp;
+	}
+
+	setup->temp_moy = setup->temp_moy/n_p;
+
+	
+	for (int i = 0; i < n_p; i++) {
+	    
+	    assemble_residual_NS(particles[i], particles_derivatives[i], residuals[i], setup, setup->temp_moy);
+	}
+
+	
+	for (int i = 0; i < n_p; i++)
+	{
+	
+		time_integrate(particles[i], residuals[i],particles_derivatives[i] ,setup->timestep);
+		 
 	}
 }
 
@@ -260,6 +314,43 @@ void compute_normal(Particle *particle, Particle_derivatives* particle_derivativ
 	double norm_n = norm(n); // norm of n
 	particle->normal->x = n->x / norm_n;
 	particle->normal->y = n->y / norm_n;
+}
+
+void moving_wall(Particle* particle, Boundary* boundary, int bound_number, double speed_wall_x, double speed_wall_y) //NOT IMPROVED
+{
+   Particle *pi = particle;
+   ListNode *node = pi->neighborhood->head;
+
+	while (node != NULL) {
+		Particle *pj = node->v;
+		if(pj->fictive == true && pj->fictive_bound == bound_number && pj->fictive_type == 2) 
+		{
+
+
+           if(bound_number == 1) //left
+           {
+              pj->v->x = (pi->v->x-speed_wall_x)*((1.0/330.0)/fabs(boundary->xleft - pi->pos->x))-speed_wall_x;
+              pj->v->y = (pi->v->y-speed_wall_y)*((1.0/330.0)/fabs(boundary->xleft - pi->pos->x))-speed_wall_y;
+           }
+           else if(bound_number == 2) //up
+           {
+           	  pj->v->x = (pi->v->x-speed_wall_x)*((1.0/330.0)/fabs(boundary->ytop - pi->pos->y))-speed_wall_x;
+              pj->v->y = (pi->v->y-speed_wall_y)*((1.0/330.0)/fabs(boundary->ytop- pi->pos->y))-speed_wall_y;
+           }
+           else if(bound_number == 3) //right
+           {
+           	  pj->v->x = (pi->v->x-speed_wall_x)*((1.0/330.0)/fabs(boundary->xright - pi->pos->x))-speed_wall_x;
+              pj->v->y = (pi->v->y-speed_wall_y)*((1.0/330.0)/fabs(boundary->xright - pi->pos->x))-speed_wall_y;
+           }
+           else if(bound_number == 4) //bottom
+           {
+           	  pj->v->x = (pi->v->x-speed_wall_x)*((1.0/330.0)/fabs(boundary->ybottom - pi->pos->y))-speed_wall_x;
+              pj->v->y = (pi->v->y-speed_wall_y)*((1.0/330.0)/fabs(boundary->ybottom - pi->pos->y))-speed_wall_y;
+           }
+           
+		}
+		node = node->next;
+	}	
 }
 
 // Assemble the residual of the (incompressible) Navier-Stokes equations based on the derivatives available
@@ -301,10 +392,9 @@ void assemble_residual_NS(Particle* particle, Particle_derivatives* particle_der
 
 	residual->mass_eq = -rho_i * div_vel_i;
 	residual->momentum_x_eq = (-1.0/rho_i) * grad_P->x + (mu_i/rho_i) * lapl_v->x;
-	double alpha = 0.604/(particle->rho*4185);
-	alpha *= 100000;
+	double beta = setup->beta;
 	double g = 9.81;
-	residual->momentum_y_eq = (-1.0/rho_i) * grad_P->y + (mu_i/rho_i) * lapl_v->y + alpha*(particle->temp-temp_moy)*g;
+	residual->momentum_y_eq = (-1.0/rho_i) * grad_P->y + (mu_i/rho_i) * lapl_v->y + beta*(particle->temp-temp_moy)*g;
 
 	if (setup->gravity == 1){
 		residual->momentum_y_eq -= g;
@@ -333,7 +423,6 @@ void time_integrate(Particle* particle, Residual* residual,Particle_derivatives 
 
 	//Update Temperature with Euleur method
 	double alpha = 0.604/(particle->rho*4185);
-	alpha *= 10000;
 	particle->temp += delta_t * dp->lapl_Temp* alpha;
 
 }
@@ -445,7 +534,7 @@ void compute_XSPH_correction(Particle *pi, Kernel kernel, double kh, double epsi
 }
 
 /////////////
-void update_positions_ellipse(Grid* grid, Particle** particles, Particle_derivatives** particles_derivatives, Residual** residuals, int n_p, Setup* setup) {
+void update_positions_ellipse(Grid* grid, Particle** particles, Particle_derivatives** particles_derivatives, Residual** residuals, int n_p, Setup* setup,Boundary* boundary) {
 
   	// Compute Cs, the XSPH correction on the velocity, and the divergence of the positions
 	for (int i = 0; i < n_p; i++) {
@@ -478,7 +567,7 @@ void update_positions_ellipse(Grid* grid, Particle** particles, Particle_derivat
 	// printf("a = %lf, b = %lf\n", a_ellipse * 0.5, b_ellipse * 0.5);
 }
 
-void update_positions_test_static_bubble(Grid* grid, Particle** particles, Particle_derivatives** particles_derivatives, Residual** residuals, int n_p, Setup* setup) {
+void update_positions_test_static_bubble(Grid* grid, Particle** particles, Particle_derivatives** particles_derivatives, Residual** residuals, int n_p, Setup* setup,Boundary* boundary) {
 
 	// Compute Cs, the XSPH correction on the velocity, and the divergence of the positions
 	int index_x_max, index_x_min, index_y_max, index_y_min;
