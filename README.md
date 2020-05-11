@@ -1,7 +1,7 @@
 Advanced Numerical Method Project
 ===================================
 
-#Comments the groupe 4 
+# Comments from the groupe 4 
 
 * All the parameters for the simulation are modifiable in the [main.c](https://github.com/tuerlinckxt/LMECA2300_project_gr4/blob/master/src/main.c). It is possible to set different parameters of temperature and alpha (for increase/decrease the heat transfert at the wall) for each boundary. 
 
