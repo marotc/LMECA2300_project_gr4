@@ -170,7 +170,7 @@ void display_particles_boundary(Particle** particles, Animation* animation, bool
 	{ x_1,  y},
 	{ x_2,  y},
 	};
-	bov_points_t* point_cursor = bov_points_new(coord_cursor, 4, GL_STATIC_DRAW);
+	bov_points_t* point_cursor = bov_points_new(coord_cursor, 2, GL_STATIC_DRAW);
 	bov_points_param_t CursorParams = {
 		.fillColor = { 1.0, 0.0, 0.0, 1.0 },
 		.scale = { 1.0, 1.0 },
