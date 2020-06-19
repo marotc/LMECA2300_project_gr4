@@ -200,7 +200,6 @@ void display_particles_boundary(Particle** particles, Animation* animation, bool
 
 	if (!end){
 		while (bov_window_get_time(window) - tbegin < animation->timeout) {
-
             //draw particle as a continuous field
           drawParticulesContinuous(animation->contiView, pts, N);
 
@@ -210,7 +209,7 @@ void display_particles_boundary(Particle** particles, Animation* animation, bool
 				// bov_lines_draw(window,animation->grid,0, BOV_TILL_END); //To show the grid
 				bov_line_loop_draw(window, point_bound, 0, BOV_TILL_END);
 			    bov_lines_draw(window, point_cursor, 0, 2); // curso for temperature
-             bov_particles_draw(window, animation->particles, 0, BOV_TILL_END);
+            bov_particles_draw(window, animation->particles, 0, BOV_TILL_END);
             if (iter%50 == 0) bov_window_screenshot(window, screenshot_name);
 			bov_window_update(window);
 		}
